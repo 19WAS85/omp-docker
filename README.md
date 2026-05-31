@@ -10,14 +10,14 @@ cd omp-docker
 make install
 ```
 
-This builds the container image and symlinks three commands into `~/.local/bin`. Ensure `~/.local/bin` is on your `PATH`.
+This builds the container image and creates wrapper scripts in `~/.local/bin`. Ensure `~/.local/bin` is on your `PATH`.
 
 ## Configuration
 
-Copy `.env.properties` to customize your settings:
+Edit `.env.default.properties` or copy it to `.env.properties` to customize your settings:
 
 ```sh
-cp .env.properties .env.properties
+cp .env.default.properties .env.properties
 # Edit .env.properties with your API keys and preferences
 ```
 
@@ -29,6 +29,8 @@ Key variables:
 | `RESOURCE_CPUS` | `2.0` | CPU limit |
 | `RESOURCE_MEMORY` | `4g` | Memory limit |
 | `NETWORK_MODE` | `restricted` | `restricted` or `open` |
+| `GIT_AUTHOR_NAME` | `agent` | Git author name |
+| `GIT_AUTHOR_EMAIL` | `agent@local` | Git author email |
 | `ANTHROPIC_API_KEY` | — | API key for agent |
 | `GITHUB_TOKEN` | — | GitHub token |
 
@@ -73,9 +75,10 @@ make docker.build    # build image only
 make docker.run      # run interactively
 make docker.run.d    # run detached
 make docker.stop     # stop containers
-make docker.clean    # remove untagged images
+make docker.clean    # remove all project images
 make docker.update   # rebuild from update stage (cache-busting)
 make docker.ls       # list project images
+make uninstall       # remove CLI wrapper scripts
 make help            # show all available commands
 ```
 
@@ -94,18 +97,20 @@ omp-docker [args]
   └─ make docker.run
       └─ docker compose run --rm omp
           └─ entrypoint.sh
-              ├─ omp update
               └─ exec omp [args]
 ```
+
+`omp update` runs at image build time (`RUN omp update` in the Dockerfile), not at container startup.
 
 | File | Purpose |
 |---|---|
 | `Makefile` | Primary CLI interface |
-| `Dockerfile` | Container image (oven/bun base) |
-| `compose.yaml` | Service config: mounts, env, capabilities |
-| `entrypoint.sh` | Bootstraps OMP, dispatches commands |
+| `Dockerfile` | Container image (oven/bun:1.2). `omp update` runs at build time. |
+| `compose.yaml` | Service config: mounts, env, capabilities, network, resource limits |
+| `entrypoint.sh` | Dispatches commands, traps signals for clean shutdown |
 | `.env.default.properties` | Committed default configuration |
 | `.env.properties` | Local overrides (gitignored) |
+| `.dockerignore` | Excludes .git, docs, markdown from build context |
 
 ## Security
 

@@ -13,14 +13,13 @@ omp-docker [args]
   └─ make docker.run
       └─ docker compose run --rm omp
           └─ entrypoint.sh
-              ├─ omp update
               └─ exec omp [args] or direct command
 ```
 
-1. **Host CLI**: `omp-docker` or `omp-docker-build` (symlinked via `make install`) calls `make docker.run` or `make docker.build`.
-2. **compose.yaml**: mounts `$PWD → /work`, `~/.omp → /root/.omp` (persistent state). Grants `NET_ADMIN` + `NET_RAW` capabilities for network-level tasks. Resource limits enforced via `deploy.resources.limits`.
-3. **entrypoint.sh**: runs `omp update` on boot, then dispatches — execs the command directly if it's in the allowlist (omp, bash, sh), otherwise delegates to `omp $@`.
-4. **Container image** (Dockerfile): layers system packages → Python venv (`/opt/omp-venv` with ipykernel) → Bun agent packages → transient Rust for napi tokenizer build → cleanup.
+1. **Host CLI**: `omp-docker` or `omp-docker-build` (wrapper scripts created via `make install`) calls `make docker.run` or `make docker.build`.
+2. **compose.yaml**: mounts `$PWD → /work`, `~/.omp → /root/.omp` (persistent state). Grants `NET_ADMIN` + `NET_RAW` capabilities for network-level tasks. Resource limits enforced via `deploy.resources.limits`. Named volumes persist pip and npm caches.
+3. **entrypoint.sh**: dispatches commands — execs the command directly if it's in the known list (omp, bash, sh), otherwise delegates to `omp $@`. Includes signal trapping for clean shutdown.
+4. **Container image** (Dockerfile): layers system packages → Python venv (`/opt/omp-venv` with ipykernel) → Bun agent packages → transient Rust for napi tokenizer build → `omp update` at build time → cleanup. HEALTHCHECK runs `omp --version`.
 
 ## Key Directories & Files
 
@@ -29,15 +28,16 @@ omp-docker [args]
 |`Makefile`|Primary CLI interface for all docker operations|
 |`Dockerfile`|Container image definition. Base: `oven/bun:1.2`. Installs dev tools, Python venv, Bun agent packages, and compiles napi tokenizers.|
 |`compose.yaml`|Docker Compose service definition. Mounts, env vars, capabilities, resource limits, network isolation.|
-|`entrypoint.sh`|Container entry point. Runs `omp update`, dispatches commands with allowlist.|
+|`entrypoint.sh`|Container entry point. Dispatches commands via allowlist, traps signals for clean shutdown.|
 |`.env.default.properties`|Committed default configuration|
 |`.env.properties`|Local overrides (gitignored)|
+|`.dockerignore`|Excludes .git, docs, scripts, markdown, env files, and compose.d from build context|
 
 ## Development Commands
 
 ```bash
 # First-time setup
-make install                    # Builds image + installs CLI symlinks
+make install                    # Builds image + installs CLI wrapper scripts
 
 # Run the agent in current directory
 make docker.run [args]          # or: omp-docker [args] after install
@@ -45,9 +45,18 @@ make docker.run [args]          # or: omp-docker [args] after install
 # Rebuild the container image
 make docker.build               # or: omp-docker-build after install
 
-# Direct docker compose usage
-make docker.run                 # Interactive agent shell
-make docker.build               # Rebuild image only
+# Rebuild with fresh OMP packages (cache-busting via build arg)
+make docker.update              # or: omp-docker-update after install
+
+# Teardown
+make uninstall                  # Removes CLI wrapper scripts
+make docker.stop                # Stops running containers
+make docker.clean               # Removes all project images
+
+# Other targets
+make docker                     # Build + run interactively
+make docker.run.d               # Run detached
+make docker.ls                  # List project images
 make help                       # Show all available commands
 ```
 
@@ -62,12 +71,12 @@ make help                       # Show all available commands
 
 ## Code Conventions & Common Patterns
 
-- Host-side scripts use `set -euo pipefail` (strict mode). `entrypoint.sh` uses `set -uo pipefail` (no errexit, since it dispatches).
-- The Makefile resolves its own directory via `$(dir $(realpath $(lastword $(MAKEFILE_LIST))))`.
-- `make docker.run` runs the container; `make docker.build` builds the image; `make docker.update` rebuilds with cache busting.
+- `entrypoint.sh` uses `set -uo pipefail` (no errexit, since it dispatches) and traps `SIGTERM`/`SIGINT` for clean shutdown.
+- The Makefile resolves its own directory via `$(dir $(realpath $(lastword $(MAKEFILE_LIST))))` and loads env via `-include .env.default.properties` / `.env.properties`.
+- `make docker.update` busts the Docker build cache by passing `--build-arg update-token=$(date +%s)`, which invalidates the `RUN omp update` step in the Dockerfile.
 - The entrypoint uses `exec` for clean signal handling (PID 1 handoff).
-- `compose.yaml` uses variable expansion with defaults: `${WORKSPACE_DIR:-.}`.
-- Environment variables are loaded from `.env.default.properties` then `.env.properties`.
+- `compose.yaml` uses variable expansion with defaults: `${WORKSPACE_DIR:-.}` and `${OMP_STATE_DIR:-~/.omp}`.
+- Named volumes (`pip-cache`, `npm-cache`) persist package caches across container runs.
 
 ## Testing & QA
 
