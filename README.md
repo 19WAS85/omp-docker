@@ -2,11 +2,6 @@
 
 Docker harness for [Oh My Pi](https://github.com/can1357/oh-my-pi), the AI coding agent. Packages the full OMP environment — Bun, Python, ripgrep, LSP, DAP, 32 built-in tools — inside a container image. You work on your local files; OMP runs in Docker.
 
-## Prerequisites
-
-- Docker with Compose v2
-- `~/.gitconfig` on the host (created automatically if missing)
-
 ## Install
 
 ```sh
