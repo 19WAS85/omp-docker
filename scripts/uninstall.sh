@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-COMPOSE_FILE="$SCRIPT_DIR/compose.yaml"
+COMPOSE_FILE="$SCRIPT_DIR/../compose.yaml"
 
 echo "[uninstall.sh] Stopping and removing OMP containers..."
 docker compose -f "$COMPOSE_FILE" down --remove-orphans 2>/dev/null || true

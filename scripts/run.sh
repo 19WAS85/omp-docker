@@ -7,5 +7,5 @@ export OMP_WORKDIR="$PWD"
 
 # Host env vars (TERM, LANG, HTTP_PROXY, etc.) are forwarded to the container
 # via bare-name passthrough in compose.yaml's environment: section.
-COMPOSE_FILE="$SCRIPT_DIR/compose.yaml"
+COMPOSE_FILE="$SCRIPT_DIR/../compose.yaml"
 exec docker compose -f "$COMPOSE_FILE" run --rm omp "$@"
