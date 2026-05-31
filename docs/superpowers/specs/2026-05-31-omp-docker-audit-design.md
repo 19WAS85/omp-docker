@@ -81,6 +81,34 @@ Key variables:
 | `NETWORK_MODE` | `restricted` | `restricted` or `open` |
 | `ANTHROPIC_API_KEY` | — | API key for agent |
 | `GITHUB_TOKEN` | — | GitHub token |
+### .env.default.properties contents
+
+```properties
+# Oh My Pi Docker — Default Configuration
+# Copy to .env.properties and customize
+
+# Workspace
+WORKSPACE=/work
+WORKSPACE_DIR=.
+OMP_STATE_DIR=~/.omp
+
+# Resource limits
+RESOURCE_CPUS=2.0
+RESOURCE_MEMORY=4g
+
+# Network mode: restricted (isolated) or open (full internet)
+NETWORK_MODE=restricted
+
+# Git identity (set in .env.properties for real identity)
+GIT_AUTHOR_NAME=agent
+GIT_AUTHOR_EMAIL=agent@local
+GIT_COMMITTER_NAME=agent
+GIT_COMMITTER_EMAIL=agent@local
+
+# API keys (set in .env.properties)
+# ANTHROPIC_API_KEY=
+# GITHUB_TOKEN=
+```
 
 ### Compose overlays
 
@@ -154,6 +182,13 @@ volumes:
 
 ### Network isolation
 
+The `NETWORK_MODE` variable controls outbound access:
+
+- `restricted` (default): Custom bridge network with no direct internet access. Agent routes through controlled egress.
+- `open`: Default bridge network with full internet access.
+
+Implementation in `compose.yaml`:
+
 ```yaml
 networks:
   agent-net:
@@ -164,6 +199,8 @@ services:
     networks:
       - agent-net
 ```
+
+For `open` mode, the Makefile overrides by passing `--network host` or by using a separate compose overlay in `compose.d/`.
 
 ### Environment forwarding
 
@@ -266,11 +303,12 @@ The `install` target:
 3. Creates `~/.local/bin` if needed
 4. Symlinks a wrapper script into `~/.local/bin`
 
-Wrapper script:
+Wrapper script (dynamically resolves Makefile location):
 
 ```bash
 #!/usr/bin/env bash
-exec make -C /path/to/omp-docker "$@"
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+exec make -C "$SCRIPT_DIR" "$@"
 ```
 
 ---
