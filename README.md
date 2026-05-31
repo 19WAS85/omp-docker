@@ -1,61 +1,84 @@
-# Oh My Pi
+# Oh My Pi — Docker
 
-Dockerized coding agent environment for [Oh My Pi](https://github.com/nicholasgasior/oh-my-pi) (OMP).
+Docker harness for [Oh My Pi](https://github.com/can1357/oh-my-pi), the AI coding agent. Packages the full OMP environment — Bun, Python, ripgrep, LSP, DAP, 32 built-in tools — inside a container image. You work on your local files; OMP runs in Docker.
 
-> **Early-stage project** — APIs and workflows may change without notice.
+## Prerequisites
+
+- Docker with Compose v2
+- `~/.gitconfig` on the host (created automatically if missing)
 
 ## Install
 
-```bash
+```sh
+git clone https://github.com/<owner>/oh-my-pi-docker.git
+cd oh-my-pi-docker
 ./install.sh
 ```
 
-This builds the Docker image and creates two symlinks in `~/.local/bin`:
-
-| Symlink | Target |
-|---------|--------|
-| `~/.local/bin/omp` | `run.sh` |
-| `~/.local/bin/omp-build` | `build.sh` |
-
-Make sure `~/.local/bin` is in your `$PATH`.
+This builds the container image and symlinks `omp` and `omp-build` into `~/.local/bin`. Ensure `~/.local/bin` is on your `PATH`.
 
 ## Usage
 
-```bash
-# Interactive agent session in the current directory
-./run.sh
+```sh
+# Run OMP in the current directory
+omp [args]
 
-# Run a specific command inside the container
-./run.sh python3 script.py
-./run.sh bash
-
-# Rebuild the image after Dockerfile changes
-./build.sh
+# Rebuild the container image after Dockerfile changes
+omp-build
 ```
 
-## How It Works
+OMP mounts your working directory as `/work` inside the container. Your `~/.omp` state persists across sessions. Git identity is read from your host `~/.gitconfig`.
+
+### Docker Compose
+
+```sh
+# Direct usage without the CLI wrappers
+docker compose run --rm omp
+
+# Rebuild image only
+docker compose build
+```
+
+## Customization
+
+The container environment is configured in `compose.yaml`. Key options:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `OMP_WORKDIR` | `.` (current dir) | Host directory mounted as `/work` |
+
+The container image includes:
+
+- **Bun** runtime with `@oh-my-pi/pi-coding-agent` and `@oh-my-pi/pi-natives`
+- **Python 3** with ipykernel at `/opt/omp-venv`
+- **ripgrep**, **fd-find**, **build-essential**, **git**, **iptables**
+
+To add packages, edit the `Dockerfile` and rebuild with `omp-build`.
+
+## Architecture
 
 ```
-Host                    Container (oven/bun)
-────                    ────────────────────
-run.sh                  entrypoint.sh
-  │                       ├─ git config
-  │                       ├─ omp update
-  │                       └─ exec omp
-  ├─ $PWD ────────────► /work
-  └─ ~/.omp ──────────► /root/.omp
+Host                          Container
+────                          ─────────
+omp [args]
+  └─ run.sh / build.sh
+      └─ docker compose run
+          └─ entrypoint.sh
+              ├─ omp update
+              └─ exec omp [args]
 ```
 
-The container mounts your working directory at `/work` and persists agent state in `~/.omp`. On startup the entrypoint configures git, updates the agent, then hands off to `omp`.
+| File | Purpose |
+|---|---|
+| `Dockerfile` | Container image definition (oven/bun base) |
+| `compose.yaml` | Service config: mounts, env, capabilities |
+| `entrypoint.sh` | Bootstraps OMP, dispatches commands |
+| `run.sh` / `build.sh` | Host CLI wrappers |
+| `install.sh` | One-time setup: build + symlinks |
 
-## Environment Variables
+## Contributing
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `OMP_WORKDIR` | Host directory mounted as `/work` | `.` (set automatically by `run.sh`) |
-| `GIT_USER_EMAIL` | Git email configured inside the container | *(not set)* |
-| `GIT_USER_NAME` | Git username configured inside the container | *(not set)* |
-
-## License
-
-*Not yet determined.*
+1. Fork and create a feature branch
+2. Make changes to the Dockerfile, scripts, or compose config
+3. Test with `./install.sh` then `omp echo "ok"`
+4. Submit a pull request
