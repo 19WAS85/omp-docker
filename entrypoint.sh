@@ -7,16 +7,11 @@ cleanup() {
 }
 trap cleanup SIGTERM SIGINT
 
-# Known agent commands that should be exec'd directly
-KNOWN_COMMANDS=(omp bash sh)
-
+# If arguments are provided, exec them directly.
+# This handles: entrypoint omp, entrypoint bash, entrypoint sh, etc.
 if [[ $# -gt 0 ]]; then
-  for cmd in "${KNOWN_COMMANDS[@]}"; do
-    if [[ "$1" == "$cmd" ]]; then
-      [[ "$1" == "omp" ]] && shift
-      exec "$@"
-    fi
-  done
+  exec "$@"
 fi
 
-exec omp "$@"
+# Default: run the agent
+exec omp

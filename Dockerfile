@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM oven/bun:1.2 AS base
+FROM oven/bun:1.3
 
 LABEL maintainer="Oh My Pi" \
       description="Docker harness for Oh My Pi coding agent" \

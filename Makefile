@@ -44,25 +44,22 @@ docker.ls: ## List project images
 	@docker images | grep -E "omp|REPOSITORY"
 
 # Setup targets
-install: docker.build ## Build image and create symlinks
+install: docker.build ## Build image and create wrapper scripts
 	@mkdir -p ~/.omp
 	@mkdir -p ~/.local/bin
 	@echo '#!/usr/bin/env bash' > ~/.local/bin/omp-docker
-	@echo 'SCRIPT_DIR="$$(cd "$$(dirname "$$(readlink -f "$$0")")" && pwd)"' >> ~/.local/bin/omp-docker
-	@echo 'exec make -C "$$SCRIPT_DIR" docker.run "$$@"' >> ~/.local/bin/omp-docker
+	@echo 'exec make -C "$(dir $(realpath $(lastword $(MAKEFILE_LIST))))" docker.run "$$@"' >> ~/.local/bin/omp-docker
 	@chmod +x ~/.local/bin/omp-docker
 	@echo '#!/usr/bin/env bash' > ~/.local/bin/omp-docker-build
-	@echo 'SCRIPT_DIR="$$(cd "$$(dirname "$$(readlink -f "$$0")")" && pwd)"' >> ~/.local/bin/omp-docker-build
-	@echo 'exec make -C "$$SCRIPT_DIR" docker.build "$$@"' >> ~/.local/bin/omp-docker-build
+	@echo 'exec make -C "$(dir $(realpath $(lastword $(MAKEFILE_LIST))))" docker.build "$$@"' >> ~/.local/bin/omp-docker-build
 	@chmod +x ~/.local/bin/omp-docker-build
 	@echo '#!/usr/bin/env bash' > ~/.local/bin/omp-docker-update
-	@echo 'SCRIPT_DIR="$$(cd "$$(dirname "$$(readlink -f "$$0")")" && pwd)"' >> ~/.local/bin/omp-docker-update
-	@echo 'exec make -C "$$SCRIPT_DIR" docker.update "$$@"' >> ~/.local/bin/omp-docker-update
+	@echo 'exec make -C "$(dir $(realpath $(lastword $(MAKEFILE_LIST))))" docker.update "$$@"' >> ~/.local/bin/omp-docker-update
 	@chmod +x ~/.local/bin/omp-docker-update
 	@echo "Installed: ~/.local/bin/omp-docker, ~/.local/bin/omp-docker-build, ~/.local/bin/omp-docker-update"
 
-uninstall: docker.stop ## Remove containers, images, and symlinks
+uninstall: docker.stop ## Remove containers, images, and wrapper scripts
 	@rm -f ~/.local/bin/omp-docker
 	@rm -f ~/.local/bin/omp-docker-build
 	@rm -f ~/.local/bin/omp-docker-update
-	@echo "Uninstalled symlinks"
+	@echo "Uninstalled wrapper scripts"
