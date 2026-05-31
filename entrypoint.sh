@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-omp update
-
 if [[ $# -gt 0 ]] && [[ "$1" != "omp" ]] && command -v "$1" &>/dev/null; then
   exec "$@"
 fi

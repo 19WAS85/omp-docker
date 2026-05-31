@@ -24,6 +24,9 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable --pr
 
 COPY --chmod=0755 entrypoint.sh /usr/local/bin/entrypoint
 
+ARG update-token
+RUN omp update
+
 WORKDIR /work
 
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
