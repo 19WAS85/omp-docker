@@ -11,8 +11,8 @@ echo "[uninstall.sh] Removing OMP images..."
 docker compose -f "$COMPOSE_FILE" down --rmi all 2>/dev/null || true
 
 echo "[uninstall.sh] Removing symlinks..."
-rm -f ~/.local/bin/omp
-rm -f ~/.local/bin/omp-build
-rm -f ~/.local/bin/omp-update
+rm -f ~/.local/bin/omp-docker
+rm -f ~/.local/bin/omp-docker-build
+rm -f ~/.local/bin/omp-docker-update
 
 echo "[uninstall.sh] Uninstall complete."
