@@ -1,0 +1,16 @@
+services:
+  omp:
+    build: .
+    volumes:
+      - ${OMP_WORKDIR:-.}:/work
+      - ~/.omp:/root/.omp
+      - ~/.gitconfig:/root/.gitconfig:ro
+    environment:
+      - GIT_CONFIG_COUNT=1
+      - GIT_CONFIG_KEY_0=safe.directory
+      - GIT_CONFIG_VALUE_0=/work
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    stdin_open: true
+    tty: true
