@@ -28,7 +28,7 @@ omp-docker [args]
 |---|---|
 | `Dockerfile` | Container image definition. Base: `oven/bun`. Installs dev tools, Python venv, Bun agent packages, and compiles napi tokenizers. |
 | `compose.yaml` | Docker Compose service definition. Mounts, env vars, capabilities. |
-| `scripts/entrypoint.sh` | Container entry point. Runs `omp update`, dispatches commands. |
+| `entrypoint.sh` | Container entry point. Runs `omp update`, dispatches commands. |
 | `scripts/run.sh` | Host CLI wrapper — `docker compose run --rm omp "$@"`. |
 | `scripts/build.sh` | Host CLI wrapper — `docker compose build "$@"`. |
 | `scripts/update.sh` | Rebuilds image with `--build-arg update-token` for cache busting. |

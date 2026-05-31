@@ -61,7 +61,7 @@ omp-docker [args]
 |---|---|
 | `Dockerfile` | Container image definition (oven/bun base) |
 | `compose.yaml` | Service config: mounts, env, capabilities |
-| `scripts/entrypoint.sh` | Bootstraps OMP, dispatches commands |
+| `entrypoint.sh` | Bootstraps OMP, dispatches commands |
 | `scripts/run.sh` | Host CLI wrapper — runs the container |
 | `scripts/build.sh` | Host CLI wrapper — builds the image |
 | `scripts/update.sh` | Rebuilds image with cache busting |
