@@ -7,10 +7,30 @@ Docker harness for [Oh My Pi](https://github.com/can1357/oh-my-pi), the AI codin
 ```sh
 git clone https://github.com/19WAS85/omp-docker.git
 cd omp-docker
-./scripts/install.sh
+make install
 ```
 
 This builds the container image and symlinks three commands into `~/.local/bin`. Ensure `~/.local/bin` is on your `PATH`.
+
+## Configuration
+
+Copy `.env.properties` to customize your settings:
+
+```sh
+cp .env.properties .env.properties
+# Edit .env.properties with your API keys and preferences
+```
+
+Key variables:
+
+| Variable | Default | Description |
+|---|---|---|
+| `WORKSPACE_DIR` | `.` | Host directory to mount |
+| `RESOURCE_CPUS` | `2.0` | CPU limit |
+| `RESOURCE_MEMORY` | `4g` | Memory limit |
+| `NETWORK_MODE` | `restricted` | `restricted` or `open` |
+| `ANTHROPIC_API_KEY` | — | API key for agent |
+| `GITHUB_TOKEN` | — | GitHub token |
 
 ## CLI Commands
 
@@ -26,7 +46,7 @@ omp-docker "fix the race condition in src/worker.py"
 omp-docker --help
 ```
 
-Your working directory is mounted at `/work` inside the container. `~/.omp` state persists across sessions. Git identity is read from your host `~/.gitconfig`.
+Your working directory is mounted at `/work` inside the container. `~/.omp` state persists across sessions.
 
 ### `omp-docker-build [args]`
 
@@ -45,6 +65,20 @@ Rebuild the image from the update stage with cache busting, so OMP and its depen
 omp-docker-update                   # pull latest OMP packages
 ```
 
+## Direct Makefile Usage
+
+```sh
+make docker          # build + run interactively (default)
+make docker.build    # build image only
+make docker.run      # run interactively
+make docker.run.d    # run detached
+make docker.stop     # stop containers
+make docker.clean    # remove untagged images
+make docker.update   # rebuild from update stage (cache-busting)
+make docker.ls       # list project images
+make help            # show all available commands
+```
+
 ## What's Inside
 
 - **Bun** runtime with `@oh-my-pi/pi-coding-agent` and `@oh-my-pi/pi-natives`
@@ -57,26 +91,32 @@ To add packages, edit the `Dockerfile` and rebuild with `omp-docker-build`.
 
 ```
 omp-docker [args]
-  └─ docker compose run --rm omp
-      └─ entrypoint.sh
-          ├─ omp update
-          └─ exec omp [args]
+  └─ make docker.run
+      └─ docker compose run --rm omp
+          └─ entrypoint.sh
+              ├─ omp update
+              └─ exec omp [args]
 ```
 
 | File | Purpose |
 |---|---|
+| `Makefile` | Primary CLI interface |
 | `Dockerfile` | Container image (oven/bun base) |
 | `compose.yaml` | Service config: mounts, env, capabilities |
 | `entrypoint.sh` | Bootstraps OMP, dispatches commands |
-| `scripts/run.sh` | `omp-docker` implementation |
-| `scripts/build.sh` | `omp-docker-build` implementation |
-| `scripts/update.sh` | `omp-docker-update` implementation |
-| `scripts/install.sh` | One-time setup: builds image + creates symlinks |
-| `scripts/uninstall.sh` | Removes containers, images, and symlinks |
+| `.env.default.properties` | Committed default configuration |
+| `.env.properties` | Local overrides (gitignored) |
+
+## Security
+
+- **Resource limits**: CPU and memory capped via `deploy.resources.limits`
+- **Network isolation**: Custom bridge network with controlled egress
+- **Credential isolation**: Git identity passed via env vars (no `~/.gitconfig` mount)
+- **Cache persistence**: Named volumes for pip/npm caches
 
 ## Contributing
 
 1. Fork and create a feature branch
-2. Make changes to the Dockerfile, scripts, or compose config
-3. Test with `omp-docker echo "ok"`
+2. Make changes to the Dockerfile, Makefile, or compose config
+3. Test with `make docker.run echo "ok"`
 4. Submit a pull request

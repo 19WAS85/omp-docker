@@ -10,51 +10,50 @@
 Host                         Container
 ────                         ─────────
 omp-docker [args]
-  └─ scripts/run.sh
-      └─ docker compose run 
-          └─ entrypoint.sh  
-              ├─ omp update  
+  └─ make docker.run
+      └─ docker compose run --rm omp
+          └─ entrypoint.sh
+              ├─ omp update
               └─ exec omp [args] or direct command
 ```
 
-1. **Host CLI**: `omp-docker` or `omp-docker-build` (symlinked via `scripts/install.sh`) calls `docker compose run --rm omp "$@"`.
-2. **compose.yaml**: mounts `$PWD → /work`, `~/.omp → /root/.omp` (persistent state), `~/.gitconfig → /root/.gitconfig` (read-only). Grants `NET_ADMIN` + `NET_RAW` capabilities for network-level tasks.
-3. **entrypoint.sh**: runs `omp update` on boot, then dispatches — execs the command directly if it's a known binary, otherwise delegates to `omp $@`.
-4. **Container image** (Dockerfile): layers system packages → Python venv (`/opt/omp-venv` with ipykernel) → Bun global CLIs (`@oh-my-pi/pi-coding-agent`, `@oh-my-pi/pi-natives`) → transient Rust for napi tokenizer build → cleanup.
+1. **Host CLI**: `omp-docker` or `omp-docker-build` (symlinked via `make install`) calls `make docker.run` or `make docker.build`.
+2. **compose.yaml**: mounts `$PWD → /work`, `~/.omp → /root/.omp` (persistent state). Grants `NET_ADMIN` + `NET_RAW` capabilities for network-level tasks. Resource limits enforced via `deploy.resources.limits`.
+3. **entrypoint.sh**: runs `omp update` on boot, then dispatches — execs the command directly if it's in the allowlist (omp, bash, sh), otherwise delegates to `omp $@`.
+4. **Container image** (Dockerfile): layers system packages → Python venv (`/opt/omp-venv` with ipykernel) → Bun agent packages → transient Rust for napi tokenizer build → cleanup.
 
 ## Key Directories & Files
 
-| Path | Purpose |
+|Path|Purpose|
 |---|---|
-| `Dockerfile` | Container image definition. Base: `oven/bun`. Installs dev tools, Python venv, Bun agent packages, and compiles napi tokenizers. |
-| `compose.yaml` | Docker Compose service definition. Mounts, env vars, capabilities. |
-| `entrypoint.sh` | Container entry point. Runs `omp update`, dispatches commands. |
-| `scripts/run.sh` | Host CLI wrapper — `docker compose run --rm omp "$@"`. |
-| `scripts/build.sh` | Host CLI wrapper — `docker compose build "$@"`. |
-| `scripts/update.sh` | Rebuilds image with `--build-arg update-token` for cache busting. |
-| `scripts/uninstall.sh` | Removes containers, images, and symlinks. |
-| `scripts/install.sh` | One-time setup: builds image, symlinks `omp-docker`/`omp-docker-build`/`omp-docker-update` into `~/.local/bin`. |
+|`Makefile`|Primary CLI interface for all docker operations|
+|`Dockerfile`|Container image definition. Base: `oven/bun:1.2`. Installs dev tools, Python venv, Bun agent packages, and compiles napi tokenizers.|
+|`compose.yaml`|Docker Compose service definition. Mounts, env vars, capabilities, resource limits, network isolation.|
+|`entrypoint.sh`|Container entry point. Runs `omp update`, dispatches commands with allowlist.|
+|`.env.default.properties`|Committed default configuration|
+|`.env.properties`|Local overrides (gitignored)|
 
 ## Development Commands
 
 ```bash
 # First-time setup
-./scripts/install.sh                # Builds image + installs CLI symlinks
+make install                    # Builds image + installs CLI symlinks
 
 # Run the agent in current directory
-./scripts/run.sh [args]                 # or: omp-docker [args] after install
+make docker.run [args]          # or: omp-docker [args] after install
 
 # Rebuild the container image
-./scripts/build.sh                      # or: omp-docker-build after install
+make docker.build               # or: omp-docker-build after install
 
 # Direct docker compose usage
-docker compose run --rm omp     # Interactive agent shell
-docker compose build            # Rebuild image only
+make docker.run                 # Interactive agent shell
+make docker.build               # Rebuild image only
+make help                       # Show all available commands
 ```
 
 ## Runtime & Tooling Preferences
 
-- **Runtime**: Bun (base image `oven/bun`)
+- **Runtime**: Bun (base image `oven/bun:1.2`)
 - **Package manager**: Bun (globally installed CLIs via `bun install -g`)
 - **Container**: Docker Compose required on host
 - **Python**: venv at `/opt/omp-venv` inside container (with ipykernel)
@@ -64,20 +63,22 @@ docker compose build            # Rebuild image only
 ## Code Conventions & Common Patterns
 
 - Host-side scripts use `set -euo pipefail` (strict mode). `entrypoint.sh` uses `set -uo pipefail` (no errexit, since it dispatches).
-- Scripts resolve their own directory via `SCRIPT_DIR` pattern.
-- `scripts/run.sh` runs the container; `scripts/build.sh` builds the image; `scripts/update.sh` rebuilds with cache busting.
+- The Makefile resolves its own directory via `$(dir $(realpath $(lastword $(MAKEFILE_LIST))))`.
+- `make docker.run` runs the container; `make docker.build` builds the image; `make docker.update` rebuilds with cache busting.
 - The entrypoint uses `exec` for clean signal handling (PID 1 handoff).
-- `compose.yaml` uses variable expansion with defaults: `${OMP_WORKDIR:-.}`.
+- `compose.yaml` uses variable expansion with defaults: `${WORKSPACE_DIR:-.}`.
+- Environment variables are loaded from `.env.default.properties` then `.env.properties`.
 
 ## Testing & QA
 
 - No formal test suite exists in this repository.
-- Validation is manual: run `./scripts/install.sh`, then verify `omp-docker` launches and mounts the working directory correctly.
-- Container health can be checked by running `docker compose run --rm omp echo "ok"`.
+- Validation is manual: run `make install`, then verify `omp-docker` launches and mounts the working directory correctly.
+- Container health can be checked by running `make docker.run echo "ok"`.
 
 ## Important Notes
 
 - `~/.omp` is mounted read-write into the container for persistent agent state across runs.
-- `~/.gitconfig` is mounted read-only for git identity without modifying host config.
-- `GIT_CONFIG_COUNT=1` and `GIT_CONFIG_GLOBAL=/root/.gitconfig` are set in compose.yaml; `safe.directory=/work` is configured to avoid git ownership warnings.
-- `scripts/run.sh` runs the container, `scripts/build.sh` builds the image, `scripts/update.sh` rebuilds with cache busting.
+- Git identity is passed via environment variables (no `~/.gitconfig` mount) for security.
+- `GIT_CONFIG_COUNT=1` and `safe.directory=/work` are configured to avoid git ownership warnings.
+- Resource limits are enforced via `deploy.resources.limits` (CPU and memory).
+- Cache persistence uses named volumes (`pip-cache`, `npm-cache`).

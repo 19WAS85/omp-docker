@@ -2,15 +2,38 @@ services:
   omp:
     build: .
     volumes:
-      - ${OMP_WORKDIR:-.}:/work
-      - ~/.omp:/root/.omp
-      - ~/.gitconfig:/root/.gitconfig:ro
+      - ${WORKSPACE_DIR:-.}:/work
+      - ${OMP_STATE_DIR:-~/.omp}:/root/.omp
+      - pip-cache:/root/.cache/pip
+      - npm-cache:/root/.bun/install/cache
     environment:
+      - TERM
+      - LANG
+      - LC_ALL
       - GIT_CONFIG_COUNT=1
       - GIT_CONFIG_KEY_0=safe.directory
       - GIT_CONFIG_VALUE_0=/work
+      - GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME:-agent}
+      - GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-agent@local}
+      - GIT_COMMITTER_NAME=${GIT_COMMITTER_NAME:-agent}
+      - GIT_COMMITTER_EMAIL=${GIT_COMMITTER_EMAIL:-agent@local}
     cap_add:
       - NET_ADMIN
       - NET_RAW
     stdin_open: true
     tty: true
+    networks:
+      - agent-net
+    deploy:
+      resources:
+        limits:
+          cpus: "${RESOURCE_CPUS:-2.0}"
+          memory: "${RESOURCE_MEMORY:-4g}"
+
+networks:
+  agent-net:
+    driver: bridge
+
+volumes:
+  pip-cache:
+  npm-cache:

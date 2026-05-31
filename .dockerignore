@@ -1,0 +1,6 @@
+.git
+docs/
+scripts/
+*.md
+.env*
+compose.d/

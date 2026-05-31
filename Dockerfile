@@ -1,5 +1,9 @@
 # syntax=docker/dockerfile:1
-FROM oven/bun
+FROM oven/bun:1.2 AS base
+
+LABEL maintainer="Oh My Pi" \
+      description="Docker harness for Oh My Pi coding agent" \
+      version="1.0"
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
@@ -28,6 +32,9 @@ ARG update-token
 RUN omp update
 
 WORKDIR /work
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD ["omp", "--version"]
 
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
 
