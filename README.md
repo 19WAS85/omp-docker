@@ -10,33 +10,42 @@ cd omp-docker
 ./scripts/install.sh
 ```
 
-This builds the container image and symlinks `omp-docker`, `omp-docker-build`, and `omp-docker-update` into `~/.local/bin`. Ensure `~/.local/bin` is on your `PATH`.
+This builds the container image and symlinks three commands into `~/.local/bin`. Ensure `~/.local/bin` is on your `PATH`.
 
-## Usage
+## CLI Commands
 
-```sh
-# Run OMP in the current directory
-omp-docker [args]
+Once installed, three commands are available from anywhere:
 
-# Rebuild the container image after Dockerfile changes
-omp-docker-build
-```
+### `omp-docker [args]`
 
-OMP mounts your working directory as `/work` inside the container. Your `~/.omp` state persists across sessions. Git identity is read from your host `~/.gitconfig`.
-
-### Docker Compose
+Run OMP in the current directory. All arguments are forwarded to the agent.
 
 ```sh
-# Direct usage without the CLI wrappers
-docker compose run --rm omp
-
-# Rebuild image only
-docker compose build
+omp-docker                          # interactive shell
+omp-docker "fix the race condition in src/worker.py"
+omp-docker --help
 ```
 
-## Customization
+Your working directory is mounted at `/work` inside the container. `~/.omp` state persists across sessions. Git identity is read from your host `~/.gitconfig`.
 
-The container environment is configured in `compose.yaml` and image includes:
+### `omp-docker-build [args]`
+
+Rebuild the container image. Use after editing the `Dockerfile` or `compose.yaml`. Extra arguments are forwarded to `docker compose build`.
+
+```sh
+omp-docker-build                    # full rebuild
+omp-docker-build --no-cache         # ignore build cache
+```
+
+### `omp-docker-update`
+
+Rebuild the image from the update stage with cache busting, so OMP and its dependencies are refreshed without rebuilding system packages from scratch.
+
+```sh
+omp-docker-update                   # pull latest OMP packages
+```
+
+## What's Inside
 
 - **Bun** runtime with `@oh-my-pi/pi-coding-agent` and `@oh-my-pi/pi-natives`
 - **Python 3** with ipykernel at `/opt/omp-venv`
@@ -47,30 +56,27 @@ To add packages, edit the `Dockerfile` and rebuild with `omp-docker-build`.
 ## Architecture
 
 ```
-Host                          Container
-────                          ─────────
 omp-docker [args]
-  └─ scripts/run.sh
-      └─ docker compose run
-          └─ entrypoint.sh
-              ├─ omp update
-              └─ exec omp [args]
+  └─ docker compose run --rm omp
+      └─ entrypoint.sh
+          ├─ omp update
+          └─ exec omp [args]
 ```
 
 | File | Purpose |
 |---|---|
-| `Dockerfile` | Container image definition (oven/bun base) |
+| `Dockerfile` | Container image (oven/bun base) |
 | `compose.yaml` | Service config: mounts, env, capabilities |
 | `entrypoint.sh` | Bootstraps OMP, dispatches commands |
-| `scripts/run.sh` | Host CLI wrapper — runs the container |
-| `scripts/build.sh` | Host CLI wrapper — builds the image |
-| `scripts/update.sh` | Rebuilds image with cache busting |
+| `scripts/run.sh` | `omp-docker` implementation |
+| `scripts/build.sh` | `omp-docker-build` implementation |
+| `scripts/update.sh` | `omp-docker-update` implementation |
+| `scripts/install.sh` | One-time setup: builds image + creates symlinks |
 | `scripts/uninstall.sh` | Removes containers, images, and symlinks |
-| `scripts/install.sh` | One-time setup: build + symlinks |
 
 ## Contributing
 
 1. Fork and create a feature branch
 2. Make changes to the Dockerfile, scripts, or compose config
-3. Test with `./scripts/install.sh` then `omp-docker echo "ok"`
+3. Test with `omp-docker echo "ok"`
 4. Submit a pull request
