@@ -3,7 +3,7 @@ FROM oven/bun:1.2 AS base
 
 LABEL maintainer="Oh My Pi" \
       description="Docker harness for Oh My Pi coding agent" \
-      version="1.0"
+      version="0.1"
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
