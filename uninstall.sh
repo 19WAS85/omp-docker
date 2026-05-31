@@ -15,7 +15,4 @@ rm -f ~/.local/bin/omp
 rm -f ~/.local/bin/omp-build
 rm -f ~/.local/bin/omp-update
 
-echo "[uninstall.sh] Removing persistent state (~/.omp)..."
-rm -rf ~/.omp
-
 echo "[uninstall.sh] Uninstall complete."
