@@ -18,7 +18,10 @@ ENV PATH="/opt/omp-venv/bin:$PATH"
 
 RUN bun install -g @oh-my-pi/pi-coding-agent @oh-my-pi/pi-natives
 
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable --profile minimal \
+RUN curl -sSf https://sh.rustup.rs -o /tmp/rustup-init.sh \
+ && echo "6c30b75a75b28a96fd913a037c8581b580080b6ee9b8169a3c0feb1af7fe8caf  /tmp/rustup-init.sh" | sha256sum -c - \
+ && sh /tmp/rustup-init.sh -y --default-toolchain stable --profile minimal \
+ && rm /tmp/rustup-init.sh \
  && . "$HOME/.cargo/env" \
  && bun install -g @napi-rs/cli \
  && cd /root/.bun/install/global/node_modules/@anush008/tokenizers \
