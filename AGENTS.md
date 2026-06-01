@@ -18,7 +18,7 @@ omp-docker [args]
 
 1. **Host CLI**: `omp-docker` or `omp-docker-build` (wrapper scripts created via `make install`) calls `make docker.run` or `make docker.build`.
 2. **compose.yaml**: mounts `$PWD → /work`, `~/.omp → /root/.omp` (persistent state), `~/.ssh → /root/.ssh:ro` (SSH keys for commit signing), `~/.gitconfig → /root/.gitconfig:ro` (git identity, auto-detected by Makefile). Grants `NET_ADMIN` + `NET_RAW` capabilities for network-level tasks. Resource limits enforced via `deploy.resources.limits`. Named volumes persist pip and npm caches.
-3. **entrypoint.sh**: dispatches commands — execs the command directly if it's in the known list (omp, bash, sh), otherwise delegates to `omp $@`. Includes signal trapping for clean shutdown.
+3. **entrypoint.sh**: copies `~/.ssh` to `/tmp/.ssh` with correct permissions (600) for SSH config and private keys, sets `GIT_SSH_COMMAND` to use the fixed config. Dispatches commands — execs the command directly if it's in the known list (omp, bash, sh), otherwise delegates to `omp $@`. Includes signal trapping for clean shutdown.
 4. **Container image** (Dockerfile): layers system packages → Python venv (`/opt/omp-venv` with ipykernel) → Bun agent packages → transient Rust for napi tokenizer build → `omp update` at build time → cleanup. HEALTHCHECK runs `omp --version`.
 
 ## Key Directories & Files
@@ -87,6 +87,6 @@ make help                       # Show all available commands
 
 - `~/.omp` is mounted read-write into the container for persistent agent state across runs.
 - `~/.gitconfig` is mounted read-only into the container for git identity (user.name/email). The Makefile auto-detects its presence — when missing, `/dev/null` is mounted instead to avoid Docker creating a directory. Git signing is configured separately via `GIT_CONFIG_COUNT` environment variables.
-- `~/.ssh` is mounted read-only into the container for SSH commit signing. `GIT_CONFIG_COUNT=4` configures `safe.directory`, `gpg.format=ssh`, `user.signingkey`, and `commit.gpgsign=true`.
+- `~/.ssh` is mounted read-only into the container for SSH commit signing. The entrypoint copies it to `/tmp/.ssh` and sets permissions to 600 (SSH rejects configs with world-readable perms). `GIT_CONFIG_COUNT=4` configures `safe.directory`, `gpg.format=ssh`, `user.signingkey`, and `commit.gpgsign=true`.
 - Resource limits are enforced via `deploy.resources.limits` (CPU and memory).
 - Cache persistence uses named volumes (`pip-cache`, `npm-cache`).
