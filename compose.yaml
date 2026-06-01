@@ -4,19 +4,23 @@ services:
     volumes:
       - ${WORKSPACE_DIR:-.}:/work
       - ${OMP_STATE_DIR:-~/.omp}:/root/.omp
+      - ${SSH_DIR:-~/.ssh}:/root/.ssh:ro
+      - ${GITCONFIG:-/dev/null}:/root/.gitconfig:ro
       - pip-cache:/root/.cache/pip
       - npm-cache:/root/.bun/install/cache
     environment:
       - TERM
       - LANG
       - LC_ALL
-      - GIT_CONFIG_COUNT=1
+      - GIT_CONFIG_COUNT=4
       - GIT_CONFIG_KEY_0=safe.directory
       - GIT_CONFIG_VALUE_0=/work
-      - GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME:-agent}
-      - GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-agent@local}
-      - GIT_COMMITTER_NAME=${GIT_COMMITTER_NAME:-agent}
-      - GIT_COMMITTER_EMAIL=${GIT_COMMITTER_EMAIL:-agent@local}
+      - GIT_CONFIG_KEY_1=gpg.format
+      - GIT_CONFIG_VALUE_1=ssh
+      - GIT_CONFIG_KEY_2=user.signingkey
+      - GIT_CONFIG_VALUE_2=${GIT_SIGNING_KEY:-/root/.ssh/id_ed25519}
+      - GIT_CONFIG_KEY_3=commit.gpgsign
+      - GIT_CONFIG_VALUE_3=true
     cap_add:
       - NET_ADMIN
       - NET_RAW
