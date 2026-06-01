@@ -12,16 +12,7 @@ services:
       - TERM
       - LANG
       - LC_ALL
-      # NOTE: GIT_CONFIG_COUNT must equal the number of KEY_N/VALUE_N pairs below (currently 4)
-      - GIT_CONFIG_COUNT=4
-      - GIT_CONFIG_KEY_0=safe.directory
-      - GIT_CONFIG_VALUE_0=/work
-      - GIT_CONFIG_KEY_1=gpg.format
-      - GIT_CONFIG_VALUE_1=ssh
-      - GIT_CONFIG_KEY_2=user.signingkey
-      - GIT_CONFIG_VALUE_2=${GIT_SIGNING_KEY:-/root/.ssh/id_ed25519}
-      - GIT_CONFIG_KEY_3=commit.gpgsign
-      - GIT_CONFIG_VALUE_3=true
+      - GIT_SIGNING_KEY
     # Required for iptables-based egress control (agent network sandboxing)
     cap_add:
       - NET_ADMIN

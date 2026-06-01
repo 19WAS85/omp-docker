@@ -8,6 +8,12 @@ if [[ -d /root/.ssh && -f /root/.ssh/config ]]; then
   export GIT_SSH_COMMAND="ssh -F /tmp/.ssh/config -o StrictHostKeyChecking=accept-new"
 fi
 
+# Configure git for container use
+git config --global safe.directory /work
+git config --global gpg.format ssh
+git config --global user.signingkey "${GIT_SIGNING_KEY:-/root/.ssh/id_ed25519}"
+git config --global commit.gpgsign true
+
 # If arguments are provided, exec them directly.
 # This handles: entrypoint omp, entrypoint bash, entrypoint sh, etc.
 if [[ $# -gt 0 ]]; then
