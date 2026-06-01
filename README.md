@@ -30,8 +30,6 @@ Key variables:
 | `RESOURCE_MEMORY` | `4g` | Memory limit |
 | `GIT_AUTHOR_NAME` | `agent` | Git author name |
 | `GIT_AUTHOR_EMAIL` | `agent@local` | Git author email |
-| `ANTHROPIC_API_KEY` | — | API key for agent |
-| `GITHUB_TOKEN` | — | GitHub token |
 
 ## CLI Commands
 
