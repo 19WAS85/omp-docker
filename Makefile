@@ -43,7 +43,7 @@ docker.build: _ensure_entrypoint ## Build the Docker image
 	docker compose -f $(COMPOSE_FILE) build
 
 docker.run: _ensure_entrypoint ## Run interactively
-	docker compose -f $(COMPOSE_FILE) run --rm omp
+	docker compose -f $(COMPOSE_FILE) run --rm omp $(ARGS)
 
 docker.run.d: _ensure_entrypoint ## Run detached
 	docker compose -f $(COMPOSE_FILE) up -d
@@ -68,7 +68,7 @@ install: docker.build ## Build image and create wrapper scripts
 	@mkdir -p ~/.omp ~/.local/bin
 	@for spec in $(WRAPPERS); do \
 	  name=$${spec%%:*}; target=$${spec##*:}; \
-	  printf '#!/usr/bin/env bash\nexec make -C "$(MAKE_DIR)" %s "$$@"\n' "$$target" > ~/.local/bin/"$$name"; \
+	  printf '#!/usr/bin/env bash\nexec make -C "$(MAKE_DIR)" %s ARGS="$$*"\n' "$$target" > ~/.local/bin/"$$name"; \
 	  chmod +x ~/.local/bin/"$$name"; \
 	done
 	@echo "Installed: $(shell echo $(WRAPPERS) | sed 's/:[^ ]*//g' | sed 's/ /, ~\//g' | sed 's/^/~/')"
