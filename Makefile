@@ -30,6 +30,20 @@ COMPOSE_FILE := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))compose.yaml
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_.-]+:.*## ' $(MAKEFILE_LIST) | awk -F'## ' '{split($$1, a, ":"); printf "\033[36m%-20s\033[0m %s\n", a[1], $$2}' | sort
 
+# Forward extra command-line goals as arguments to docker.run.
+# Handles `make docker.run -- --resume` by capturing --resume
+# as a container argument instead of a Make target.
+_KNOWN_TARGETS := help _ensure_entrypoint \
+  docker docker.build docker.run docker.run.d \
+  docker.stop docker.clean docker.update docker.ls \
+  install uninstall
+_EXTRAS := $(filter-out $(_KNOWN_TARGETS),$(MAKECMDGOALS))
+ifneq ($(_EXTRAS),)
+  ARGS ?= -- $(_EXTRAS)
+  .PHONY: $(_EXTRAS)
+  $(_EXTRAS): ;@true
+endif
+
 
 # Ensure entrypoint is executable (idempotent; run before any docker compose call)
 _ensure_entrypoint:
