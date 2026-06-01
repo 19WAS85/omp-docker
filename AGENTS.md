@@ -16,7 +16,6 @@ For install, configuration, CLI usage, and architecture overview, see [README.md
 - No formal test suite exists in this repository.
 - Validation is manual: run `make install`, then verify `omp-docker` launches and mounts the working directory correctly.
 - Container health can be checked by running `make docker.run echo "ok"`.
-- CI runs `make docker.build` and `make docker.run echo "ok"` via GitHub Actions.
 
 ## Important Notes
 

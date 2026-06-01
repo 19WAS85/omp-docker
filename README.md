@@ -14,30 +14,26 @@ This builds the container image and creates wrapper scripts in `~/.local/bin`. E
 
 ## Configuration
 
-Edit `.env.default.properties` to customize your settings, or set environment variables directly before running `make`:
-
-Key variables:
+Edit `.env.default.properties` to customize settings, or set environment variables before running `make`. For secrets (API keys, tokens), create a local `.env.properties` file (gitignored).
 
 | Variable | Default | Description |
 |---|---|---|
-| `WORKSPACE_DIR` | `.` | Host directory to mount |
-| `RESOURCE_CPUS` | `2.0` | CPU limit |
-| `RESOURCE_MEMORY` | `4g` | Memory limit |
-| `GIT_AUTHOR_NAME` | `agent` | Git author name |
-| `GIT_AUTHOR_EMAIL` | `agent@local` | Git author email |
+| `WORKSPACE_DIR` | `.` | Host directory to mount at `/work` |
+| `OMP_STATE_DIR` | `$HOME/.omp` | Persistent agent state directory |
 | `SSH_DIR` | `$HOME/.ssh` | Host SSH directory (mounted read-only for commit signing) |
 | `GIT_SIGNING_KEY` | `/root/.ssh/id_ed25519` | SSH key path for commit signing |
+| `RESOURCE_CPUS` | `2.0` | CPU limit |
+| `RESOURCE_MEMORY` | `4g` | Memory limit |
 
 ## CLI Commands
 
 Once installed, three commands are available from anywhere:
 
 ### `omp-docker [args]`
-
-Run OMP in the current directory. All arguments are forwarded to the agent.
+Run the OMP agent in the current directory. All arguments are forwarded to the agent.
 
 ```sh
-omp-docker                          # interactive shell
+omp-docker                          # start agent interactively
 omp-docker "fix the race condition in src/worker.py"
 omp-docker --help
 ```
@@ -101,7 +97,7 @@ omp-docker [args]
 | `Makefile` | Primary CLI interface |
 | `Dockerfile` | Container image (oven/bun:1.3). `omp update` runs at build time. |
 | `compose.yaml` | Service config: mounts, env, capabilities, network, resource limits |
-| `entrypoint.sh` | Dispatches commands, traps signals for clean shutdown |
+| `entrypoint.sh` | Copies SSH keys with correct perms, dispatches commands via `exec` |
 | `.env.default.properties` | Committed default configuration |
 | `.dockerignore` | Excludes .git, docs, markdown from build context |
 
@@ -110,7 +106,7 @@ omp-docker [args]
 - **Resource limits**: CPU and memory capped via `deploy.resources.limits`
 - **Network isolation**: Custom bridge network with controlled egress
 - **Capabilities**: `NET_ADMIN` and `NET_RAW` are required for iptables-based egress control (agent network sandboxing)
-- **Credential isolation**: Git identity via env vars; `~/.ssh` mounted read-only for commit signing (no `~/.gitconfig` mount)
+- **Credential isolation**: Git identity via `~/.gitconfig` (mounted read-only, auto-detected); `~/.ssh` mounted read-only for commit signing
 - **Cache persistence**: Named volumes for pip/npm caches
 
 ## Contributing
