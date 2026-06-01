@@ -24,7 +24,7 @@ docker.build: ## Build the Docker image
 
 docker.run: ## Run interactively
 	@chmod +x entrypoint.sh
-	OMP_WORKDIR="$$PWD" docker compose -f $(COMPOSE_FILE) run --rm omp
+	docker compose -f $(COMPOSE_FILE) run --rm omp
 
 docker.run.d: ## Run detached
 	@chmod +x entrypoint.sh

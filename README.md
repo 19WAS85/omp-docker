@@ -28,7 +28,6 @@ Key variables:
 | `WORKSPACE_DIR` | `.` | Host directory to mount |
 | `RESOURCE_CPUS` | `2.0` | CPU limit |
 | `RESOURCE_MEMORY` | `4g` | Memory limit |
-| `NETWORK_MODE` | `restricted` | `restricted` or `open` |
 | `GIT_AUTHOR_NAME` | `agent` | Git author name |
 | `GIT_AUTHOR_EMAIL` | `agent@local` | Git author email |
 | `ANTHROPIC_API_KEY` | — | API key for agent |
