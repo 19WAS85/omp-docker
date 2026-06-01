@@ -14,12 +14,7 @@ This builds the container image and creates wrapper scripts in `~/.local/bin`. E
 
 ## Configuration
 
-Edit `.env.default.properties` or copy it to `.env.properties` to customize your settings:
-
-```sh
-cp .env.default.properties .env.properties
-# Edit .env.properties with your API keys and preferences
-```
+Edit `.env.default.properties` to customize your settings, or set environment variables directly before running `make`:
 
 Key variables:
 
@@ -30,6 +25,8 @@ Key variables:
 | `RESOURCE_MEMORY` | `4g` | Memory limit |
 | `GIT_AUTHOR_NAME` | `agent` | Git author name |
 | `GIT_AUTHOR_EMAIL` | `agent@local` | Git author email |
+| `SSH_DIR` | `~/.ssh` | Host SSH directory (mounted read-only for commit signing) |
+| `GIT_SIGNING_KEY` | `/root/.ssh/id_ed25519` | SSH key path for commit signing |
 
 ## CLI Commands
 
@@ -106,14 +103,13 @@ omp-docker [args]
 | `compose.yaml` | Service config: mounts, env, capabilities, network, resource limits |
 | `entrypoint.sh` | Dispatches commands, traps signals for clean shutdown |
 | `.env.default.properties` | Committed default configuration |
-| `.env.properties` | Local overrides (gitignored) |
 | `.dockerignore` | Excludes .git, docs, markdown from build context |
 
 ## Security
 
 - **Resource limits**: CPU and memory capped via `deploy.resources.limits`
 - **Network isolation**: Custom bridge network with controlled egress
-- **Credential isolation**: Git identity passed via env vars (no `~/.gitconfig` mount)
+- **Credential isolation**: Git identity via env vars; `~/.ssh` mounted read-only for commit signing (no `~/.gitconfig` mount)
 - **Cache persistence**: Named volumes for pip/npm caches
 
 ## Contributing

@@ -1,9 +1,16 @@
 # Oh My Pi Docker — Makefile
 # Primary interface for all docker operations
 
-# Load env files (order matters: defaults first, then overrides)
+# Load env files (defaults first; .env.properties is optional for local overrides)
 -include .env.default.properties
 -include .env.properties
+
+# Auto-detect host .gitconfig for git identity in container
+# Only mount when the file exists — Docker would create a directory otherwise
+GITCONFIG_FILE := $(HOME)/.gitconfig
+ifneq ($(wildcard $(GITCONFIG_FILE)),)
+export GITCONFIG=$(GITCONFIG_FILE)
+endif
 
 # Resolve compose file path
 COMPOSE_FILE := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))compose.yaml

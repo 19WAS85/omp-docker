@@ -17,7 +17,7 @@ omp-docker [args]
 ```
 
 1. **Host CLI**: `omp-docker` or `omp-docker-build` (wrapper scripts created via `make install`) calls `make docker.run` or `make docker.build`.
-2. **compose.yaml**: mounts `$PWD → /work`, `~/.omp → /root/.omp` (persistent state). Grants `NET_ADMIN` + `NET_RAW` capabilities for network-level tasks. Resource limits enforced via `deploy.resources.limits`. Named volumes persist pip and npm caches.
+2. **compose.yaml**: mounts `$PWD → /work`, `~/.omp → /root/.omp` (persistent state), `~/.ssh → /root/.ssh:ro` (SSH keys for commit signing), `~/.gitconfig → /root/.gitconfig:ro` (git identity, auto-detected by Makefile). Grants `NET_ADMIN` + `NET_RAW` capabilities for network-level tasks. Resource limits enforced via `deploy.resources.limits`. Named volumes persist pip and npm caches.
 3. **entrypoint.sh**: dispatches commands — execs the command directly if it's in the known list (omp, bash, sh), otherwise delegates to `omp $@`. Includes signal trapping for clean shutdown.
 4. **Container image** (Dockerfile): layers system packages → Python venv (`/opt/omp-venv` with ipykernel) → Bun agent packages → transient Rust for napi tokenizer build → `omp update` at build time → cleanup. HEALTHCHECK runs `omp --version`.
 
@@ -29,8 +29,7 @@ omp-docker [args]
 |`Dockerfile`|Container image definition. Base: `oven/bun:1.2`. Installs dev tools, Python venv, Bun agent packages, and compiles napi tokenizers.|
 |`compose.yaml`|Docker Compose service definition. Mounts, env vars, capabilities, resource limits, network isolation.|
 |`entrypoint.sh`|Container entry point. Dispatches commands via allowlist, traps signals for clean shutdown.|
-|`.env.default.properties`|Committed default configuration|
-|`.env.properties`|Local overrides (gitignored)|
+|`.env.default.properties`|Committed default configuration (override via `.env.properties` or env vars)|
 |`.dockerignore`|Excludes .git, docs, scripts, markdown, env files, and compose.d from build context|
 
 ## Development Commands
@@ -72,10 +71,10 @@ make help                       # Show all available commands
 ## Code Conventions & Common Patterns
 
 - `entrypoint.sh` uses `set -uo pipefail` (no errexit, since it dispatches) and traps `SIGTERM`/`SIGINT` for clean shutdown.
-- The Makefile resolves its own directory via `$(dir $(realpath $(lastword $(MAKEFILE_LIST))))` and loads env via `-include .env.default.properties` / `.env.properties`.
+- The Makefile resolves its own directory via `$(dir $(realpath $(lastword $(MAKEFILE_LIST))))` and loads env via `-include .env.default.properties` (with optional `.env.properties` for local overrides).
 - `make docker.update` busts the Docker build cache by passing `--build-arg update-token=$(date +%s)`, which invalidates the `RUN omp update` step in the Dockerfile.
 - The entrypoint uses `exec` for clean signal handling (PID 1 handoff).
-- `compose.yaml` uses variable expansion with defaults: `${WORKSPACE_DIR:-.}` and `${OMP_STATE_DIR:-~/.omp}`.
+- `compose.yaml` uses variable expansion with defaults: `${WORKSPACE_DIR:-.}`, `${OMP_STATE_DIR:-~/.omp}`, and `${SSH_DIR:-~/.ssh}`.
 - Named volumes (`pip-cache`, `npm-cache`) persist package caches across container runs.
 
 ## Testing & QA
@@ -87,7 +86,7 @@ make help                       # Show all available commands
 ## Important Notes
 
 - `~/.omp` is mounted read-write into the container for persistent agent state across runs.
-- Git identity is passed via environment variables (no `~/.gitconfig` mount) for security.
-- `GIT_CONFIG_COUNT=1` and `safe.directory=/work` are configured to avoid git ownership warnings.
+- `~/.gitconfig` is mounted read-only into the container for git identity (user.name/email). The Makefile auto-detects its presence — when missing, `/dev/null` is mounted instead to avoid Docker creating a directory. Git signing is configured separately via `GIT_CONFIG_COUNT` environment variables.
+- `~/.ssh` is mounted read-only into the container for SSH commit signing. `GIT_CONFIG_COUNT=4` configures `safe.directory`, `gpg.format=ssh`, `user.signingkey`, and `commit.gpgsign=true`.
 - Resource limits are enforced via `deploy.resources.limits` (CPU and memory).
 - Cache persistence uses named volumes (`pip-cache`, `npm-cache`).
