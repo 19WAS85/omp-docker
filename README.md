@@ -25,7 +25,7 @@ Key variables:
 | `RESOURCE_MEMORY` | `4g` | Memory limit |
 | `GIT_AUTHOR_NAME` | `agent` | Git author name |
 | `GIT_AUTHOR_EMAIL` | `agent@local` | Git author email |
-| `SSH_DIR` | `~/.ssh` | Host SSH directory (mounted read-only for commit signing) |
+| `SSH_DIR` | `$HOME/.ssh` | Host SSH directory (mounted read-only for commit signing) |
 | `GIT_SIGNING_KEY` | `/root/.ssh/id_ed25519` | SSH key path for commit signing |
 
 ## CLI Commands
@@ -99,7 +99,7 @@ omp-docker [args]
 | File | Purpose |
 |---|---|
 | `Makefile` | Primary CLI interface |
-| `Dockerfile` | Container image (oven/bun:1.2). `omp update` runs at build time. |
+| `Dockerfile` | Container image (oven/bun:1.3). `omp update` runs at build time. |
 | `compose.yaml` | Service config: mounts, env, capabilities, network, resource limits |
 | `entrypoint.sh` | Dispatches commands, traps signals for clean shutdown |
 | `.env.default.properties` | Committed default configuration |
@@ -109,6 +109,7 @@ omp-docker [args]
 
 - **Resource limits**: CPU and memory capped via `deploy.resources.limits`
 - **Network isolation**: Custom bridge network with controlled egress
+- **Capabilities**: `NET_ADMIN` and `NET_RAW` are required for iptables-based egress control (agent network sandboxing)
 - **Credential isolation**: Git identity via env vars; `~/.ssh` mounted read-only for commit signing (no `~/.gitconfig` mount)
 - **Cache persistence**: Named volumes for pip/npm caches
 
