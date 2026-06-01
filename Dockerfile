@@ -7,7 +7,7 @@ LABEL maintainer="Oh My Pi" \
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      build-essential ca-certificates curl git iptables \
+      build-essential ca-certificates curl git iptables openssh-client \
       python3 python3-pip python3-venv ripgrep fd-find \
  && ln -sf /usr/bin/fdfind /usr/local/bin/fd \
  && rm -rf /var/lib/apt/lists/*
