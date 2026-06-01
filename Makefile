@@ -5,6 +5,14 @@
 -include .env.default.properties
 -include .env.properties
 
+# Export config so docker compose sees actual values (not just Make-internal vars)
+export WORKSPACE_DIR
+export OMP_STATE_DIR
+export SSH_DIR
+export GIT_SIGNING_KEY
+export RESOURCE_CPUS
+export RESOURCE_MEMORY
+
 # Auto-detect host .gitconfig for git identity in container
 # Only mount when the file exists — Docker would create a directory otherwise
 GITCONFIG_FILE := $(HOME)/.gitconfig
@@ -20,21 +28,24 @@ COMPOSE_FILE := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))compose.yaml
 
 # Help target
 help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@grep -hE '^[a-zA-Z_.-]+:.*## ' $(MAKEFILE_LIST) | awk -F'## ' '{split($$1, a, ":"); printf "\033[36m%-20s\033[0m %s\n", a[1], $$2}' | sort
+
+
+# Ensure entrypoint is executable (idempotent; run before any docker compose call)
+_ensure_entrypoint:
+	@chmod +x entrypoint.sh
+.PHONY: _ensure_entrypoint
 
 # Docker targets
 docker: docker.build docker.run ## Build and run interactively
 
-docker.build: ## Build the Docker image
-	@chmod +x entrypoint.sh
+docker.build: _ensure_entrypoint ## Build the Docker image
 	docker compose -f $(COMPOSE_FILE) build
 
-docker.run: ## Run interactively
-	@chmod +x entrypoint.sh
+docker.run: _ensure_entrypoint ## Run interactively
 	docker compose -f $(COMPOSE_FILE) run --rm omp
 
-docker.run.d: ## Run detached
-	@chmod +x entrypoint.sh
+docker.run.d: _ensure_entrypoint ## Run detached
 	docker compose -f $(COMPOSE_FILE) up -d
 
 docker.stop: ## Stop containers
@@ -43,30 +54,25 @@ docker.stop: ## Stop containers
 docker.clean: ## Remove untagged images
 	docker compose -f $(COMPOSE_FILE) down --rmi all
 
-docker.update: ## Rebuild from update stage (cache-busting)
-	@chmod +x entrypoint.sh
+docker.update: _ensure_entrypoint ## Rebuild from update stage (cache-busting)
 	docker compose -f $(COMPOSE_FILE) build --build-arg update-token="$$(date +%s)"
 
 docker.ls: ## List project images
 	@docker images | grep -E "omp|REPOSITORY"
 
-# Setup targets
+# Wrapper scripts: each maps a CLI name to a make target
+WRAPPERS := omp-docker:docker.run omp-docker-build:docker.build omp-docker-update:docker.update
+MAKE_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+
 install: docker.build ## Build image and create wrapper scripts
-	@mkdir -p ~/.omp
-	@mkdir -p ~/.local/bin
-	@echo '#!/usr/bin/env bash' > ~/.local/bin/omp-docker
-	@echo 'exec make -C "$(dir $(realpath $(lastword $(MAKEFILE_LIST))))" docker.run "$$@"' >> ~/.local/bin/omp-docker
-	@chmod +x ~/.local/bin/omp-docker
-	@echo '#!/usr/bin/env bash' > ~/.local/bin/omp-docker-build
-	@echo 'exec make -C "$(dir $(realpath $(lastword $(MAKEFILE_LIST))))" docker.build "$$@"' >> ~/.local/bin/omp-docker-build
-	@chmod +x ~/.local/bin/omp-docker-build
-	@echo '#!/usr/bin/env bash' > ~/.local/bin/omp-docker-update
-	@echo 'exec make -C "$(dir $(realpath $(lastword $(MAKEFILE_LIST))))" docker.update "$$@"' >> ~/.local/bin/omp-docker-update
-	@chmod +x ~/.local/bin/omp-docker-update
-	@echo "Installed: ~/.local/bin/omp-docker, ~/.local/bin/omp-docker-build, ~/.local/bin/omp-docker-update"
+	@mkdir -p ~/.omp ~/.local/bin
+	@for spec in $(WRAPPERS); do \
+	  name=$${spec%%:*}; target=$${spec##*:}; \
+	  printf '#!/usr/bin/env bash\nexec make -C "$(MAKE_DIR)" %s "$$@"\n' "$$target" > ~/.local/bin/"$$name"; \
+	  chmod +x ~/.local/bin/"$$name"; \
+	done
+	@echo "Installed: $(shell echo $(WRAPPERS) | sed 's/:[^ ]*//g' | sed 's/ /, ~\//g' | sed 's/^/~/')"
 
 uninstall: docker.stop ## Remove containers, images, and wrapper scripts
-	@rm -f ~/.local/bin/omp-docker
-	@rm -f ~/.local/bin/omp-docker-build
-	@rm -f ~/.local/bin/omp-docker-update
+	@for spec in $(WRAPPERS); do rm -f ~/.local/bin/$${spec%%:*}; done
 	@echo "Uninstalled wrapper scripts"
