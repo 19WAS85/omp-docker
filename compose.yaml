@@ -3,8 +3,8 @@ services:
     build: .
     volumes:
       - ${WORKSPACE_DIR:-.}:/work
-      - ${OMP_STATE_DIR:-~/.omp}:/root/.omp
-      - ${SSH_DIR:-~/.ssh}:/root/.ssh:ro
+      - ${OMP_STATE_DIR:-$HOME/.omp}:/root/.omp
+      - ${SSH_DIR:-$HOME/.ssh}:/root/.ssh:ro
       - ${GITCONFIG:-/dev/null}:/root/.gitconfig:ro
       - pip-cache:/root/.cache/pip
       - npm-cache:/root/.bun/install/cache
@@ -12,6 +12,7 @@ services:
       - TERM
       - LANG
       - LC_ALL
+      # NOTE: GIT_CONFIG_COUNT must equal the number of KEY_N/VALUE_N pairs below (currently 4)
       - GIT_CONFIG_COUNT=4
       - GIT_CONFIG_KEY_0=safe.directory
       - GIT_CONFIG_VALUE_0=/work
@@ -21,6 +22,7 @@ services:
       - GIT_CONFIG_VALUE_2=${GIT_SIGNING_KEY:-/root/.ssh/id_ed25519}
       - GIT_CONFIG_KEY_3=commit.gpgsign
       - GIT_CONFIG_VALUE_3=true
+    # Required for iptables-based egress control (agent network sandboxing)
     cap_add:
       - NET_ADMIN
       - NET_RAW

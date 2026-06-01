@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-# Clean shutdown on signals
-cleanup() {
-  exit 0
-}
-trap cleanup SIGTERM SIGINT
-
 # Fix SSH config permissions (host mount is :ro with 644; SSH requires ≤ 600)
 if [[ -d /root/.ssh && -f /root/.ssh/config ]]; then
   cp -r /root/.ssh /tmp/.ssh

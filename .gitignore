@@ -1,2 +1,3 @@
 .last-build
 overrides.env
+.env.properties
